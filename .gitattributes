@@ -1,0 +1,14 @@
+# Normalize line endings: store text as LF in the repo, check out native on Windows.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF on checkout.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Treat known binaries as binary (no EOL munging, no diff).
+*.gguf binary
+*.png binary
+*.jpg binary
+*.wav binary
+*.mp3 binary
