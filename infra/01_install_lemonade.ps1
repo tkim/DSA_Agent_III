@@ -5,32 +5,38 @@
 # on port 13305 and does NOT touch any existing Ollama install (DSA_Agent_II keeps
 # working). Do NOT reconfigure Lemonade to bind Ollama's port 11434.
 #
-# This script tries winget first, then points you at the official installer.
+# Official Windows install is the MSI (there is no winget package). This script
+# downloads the latest lemonade.msi and launches the installer, then verifies the
+# server answers on :13305.
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== Lemonade Server 11.0 install ===" -ForegroundColor Cyan
+Write-Host "=== Lemonade Server 11.0 install (Windows MSI) ===" -ForegroundColor Cyan
 
-# 1. Try winget (id may vary by build; adjust if winget reports not found).
-$installed = $false
+$MsiUrl = "https://github.com/lemonade-sdk/lemonade/releases/latest/download/lemonade.msi"
+$MsiPath = Join-Path $env:TEMP "lemonade.msi"
+
+Write-Host "Downloading installer from:" -ForegroundColor Gray
+Write-Host "  $MsiUrl"
 try {
-    winget install --id AMD.Lemonade -e --accept-package-agreements --accept-source-agreements
-    if ($?) { $installed = $true }
+    Invoke-WebRequest -Uri $MsiUrl -OutFile $MsiPath -UseBasicParsing
+    Write-Host "Saved to $MsiPath" -ForegroundColor Green
 } catch {
-    Write-Host "winget path unavailable: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "Download failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Download it manually from https://lemonade-server.ai/ (Windows / MSI) and run it." -ForegroundColor Yellow
+    exit 1
 }
 
-if (-not $installed) {
-    Write-Host ""
-    Write-Host "Automatic install not available. Download the Windows installer from:" -ForegroundColor Yellow
-    Write-Host "  https://lemonade-server.ai/  (Get Started -> Windows installer)" -ForegroundColor Cyan
-    Write-Host "  or GitHub releases: https://github.com/lemonade-sdk/lemonade/releases" -ForegroundColor Cyan
-    Write-Host "The installer auto-detects hardware, pulls backends, and registers the service." -ForegroundColor Gray
-    Write-Host ""
-    Read-Host "Press Enter once Lemonade is installed to verify the server"
-}
+Write-Host "`nLaunching the MSI installer (accept the UAC / installer prompts)..." -ForegroundColor Cyan
+# Interactive install so you can see the prompts; the installer adds
+# `lemonade-server` to PATH and registers the service.
+Start-Process msiexec.exe -ArgumentList "/i `"$MsiPath`"" -Wait
 
-# 2. Verify the server answers on :13305.
+Write-Host "`nIMPORTANT: open a NEW terminal so the updated PATH is picked up." -ForegroundColor Yellow
+Write-Host "Then start the server (if it did not auto-start from the tray):" -ForegroundColor Gray
+Write-Host "  lemonade-server serve" -ForegroundColor White
+
+# Verify the server answers on :13305 (v11 default; changed from 8000 in v10.1).
 Write-Host "`nVerifying Lemonade server on :13305 ..." -ForegroundColor Cyan
 $ok = $false
 for ($i = 0; $i -lt 20; $i++) {
@@ -38,7 +44,7 @@ for ($i = 0; $i -lt 20; $i++) {
         $r = Invoke-WebRequest -Uri "http://localhost:13305/v1/models" -TimeoutSec 2 -UseBasicParsing
         if ($r.StatusCode -ge 200) { $ok = $true; break }
     } catch {
-        # 4xx still means the server is up
+        # A 4xx still means the server is answering.
         if ($_.Exception.Response) { $ok = $true; break }
     }
     Start-Sleep -Milliseconds 500
@@ -48,6 +54,8 @@ if ($ok) {
     Write-Host "Lemonade server is reachable on http://localhost:13305/v1" -ForegroundColor Green
     Write-Host "Next: .\infra\02_pull_models.ps1" -ForegroundColor Cyan
 } else {
-    Write-Host "Server not reachable yet. Start it via the Lemonade app / 'lemonade-server serve'." -ForegroundColor Red
+    Write-Host "Server not reachable yet — that's expected if you still need to open a" -ForegroundColor Yellow
+    Write-Host "new terminal and run 'lemonade-server serve'. Re-run this script or just" -ForegroundColor Yellow
+    Write-Host "check: netstat -ano | findstr :13305" -ForegroundColor Yellow
     exit 1
 }
