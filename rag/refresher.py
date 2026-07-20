@@ -178,6 +178,26 @@ DOC_SOURCES: dict[str, list[dict]] = {
     ],
     "snowflake": [
         {
+            # Official Snowflake platform documentation. Like Databricks, Snowflake
+            # does not publish docs.snowflake.com to a public git repo, so pages are
+            # enumerated from its sitemap. robots.txt (docs.snowflake.com/robots.txt)
+            # is permissive apart from the four Disallow patterns below.
+            #
+            # /release-notes/ (~1,690 pages) is excluded: it is historical changelog
+            # noise that dominates by volume while answering almost no conceptual or
+            # admin questions — the same rationale Databricks uses to drop the PySpark
+            # API reference. Everything else (sql-reference, user-guide, developer-
+            # guide, migrations, connectors, ~6,460 pages) is kept.
+            "id":              "snowflake-platform-docs",
+            "type":            "web_sitemap",
+            "sitemap_url":     "https://docs.snowflake.com/en/sitemap.xml",
+            "url_base":        "https://docs.snowflake.com/en/",
+            "robots_disallow": ["/sql-reference/commands-", "/INCLUDE/", "/DRAFT/", "/PREVIEW/"],
+            "exclude_prefixes": ["/release-notes/"],
+            "min_chars":       200,     # skip nav-only stubs and error pages
+            "out_dir":         "snowflake/platform",
+        },
+        {
             "id":         "snowflake-connector-python",
             "repo":       "snowflakedb/snowflake-connector-python",
             "track_path": "README.md",
