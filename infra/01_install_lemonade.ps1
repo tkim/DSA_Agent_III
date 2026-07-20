@@ -32,9 +32,11 @@ Write-Host "`nLaunching the MSI installer (accept the UAC / installer prompts)..
 # `lemonade-server` to PATH and registers the service.
 Start-Process msiexec.exe -ArgumentList "/i `"$MsiPath`"" -Wait
 
-Write-Host "`nIMPORTANT: open a NEW terminal so the updated PATH is picked up." -ForegroundColor Yellow
-Write-Host "Then start the server (if it did not auto-start from the tray):" -ForegroundColor Gray
-Write-Host "  lemonade-server serve" -ForegroundColor White
+Write-Host "`nThe installer registers a tray autostart that runs the server as" -ForegroundColor Gray
+Write-Host "'LemonadeServer.exe --silent'. Do NOT start a second copy by hand -- two" -ForegroundColor Gray
+Write-Host "instances fight over :13305 and one dies (transient 'connection refused')." -ForegroundColor Gray
+Write-Host "If it is ever down, bring it up idempotently with:" -ForegroundColor Gray
+Write-Host "  .\infra\start_server.ps1" -ForegroundColor White
 
 # Verify the server answers on :13305 (v11 default; changed from 8000 in v10.1).
 Write-Host "`nVerifying Lemonade server on :13305 ..." -ForegroundColor Cyan
@@ -54,7 +56,7 @@ if ($ok) {
     Write-Host "Lemonade server is reachable on http://localhost:13305/v1" -ForegroundColor Green
     Write-Host "Next: .\infra\02_pull_models.ps1" -ForegroundColor Cyan
 } else {
-    Write-Host "Server not reachable yet — that's expected if you still need to open a" -ForegroundColor Yellow
+    Write-Host "Server not reachable yet -- that's expected if you still need to open a" -ForegroundColor Yellow
     Write-Host "new terminal and run 'lemonade-server serve'. Re-run this script or just" -ForegroundColor Yellow
     Write-Host "check: netstat -ano | findstr :13305" -ForegroundColor Yellow
     exit 1

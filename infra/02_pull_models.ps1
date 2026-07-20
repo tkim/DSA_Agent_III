@@ -5,7 +5,7 @@
 #   - NPU hybrid:  a RyzenAI *Hybrid* small model for routing/planning  [Gate B]
 #
 # Uses the `lemonade-server` CLI. Model/registry names can drift between Lemonade
-# builds — if a pull 404s, run `lemonade-server list` and adjust the names below
+# builds -- if a pull 404s, run `lemonade-server list` and adjust the names below
 # (and set ROUTER_MODEL in .env to whatever hybrid model you land on).
 
 $ErrorActionPreference = "Continue"
@@ -41,4 +41,4 @@ if ($hybridPulled) {
     Write-Host "The app still runs iGPU-only until then (ROUTER_MODEL falls back to AGENT_MODEL)." -ForegroundColor Gray
 }
 
-Write-Host "`nNext: python infra\03_verify_toolcall.py   (Gate A — must pass 3/3)" -ForegroundColor Cyan
+Write-Host "`nNext: python infra\03_verify_toolcall.py   (Gate A -- must pass 3/3)" -ForegroundColor Cyan
