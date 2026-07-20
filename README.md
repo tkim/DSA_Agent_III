@@ -88,19 +88,23 @@ so it never evicts the LLMs.
 
 ### Swapping the voice model
 
-Three built-in options (all local, from Hugging Face via Lemonade):
+Built-in options (all local, from Hugging Face via Lemonade):
 
-| Model | Size | Notes |
-|---|---|---|
-| **kokoro-v1** (default) | 0.35 GB | Small, fast, natural — best for reading answers aloud |
-| **MOSS-VoiceGen** | 7.3 GB | Voice cloning / voice-design |
-| **OpenMOSS-TTS** | 12.5 GB | Full OpenMOSS TTS |
+| Model | Size | Recipe | Status on this Z13 (gfx1151) |
+|---|---|---|---|
+| **kokoro-v1** (default) | 0.35 GB | kokoro | ✅ Validated — small, fast, natural |
+| MOSS-VoiceGen | 3.8 GB | openmoss | ⚠️ Load hangs — openmoss backend doesn't come up on gfx1151 (same class as the ROCm-500 issue) |
+| OpenMOSS-TTS | 12.5 GB | openmoss | ⚠️ Same openmoss backend limitation |
+
+**Recommendation: stay on kokoro-v1** — it's fast, high quality, and the only TTS validated
+on this hardware. The openmoss models download fine but their backend currently hangs on
+load here; revisit if a newer Lemonade/ROCm build fixes it.
 
 Swap in one command (pulls the model if needed, updates `.env`):
 
 ```powershell
-.\infra\set_tts.ps1 MOSS-VoiceGen           # switch to MOSS-VoiceGen
-.\infra\set_tts.ps1 kokoro-v1 -Voice af_bella   # back to kokoro with a named voice
+.\infra\set_tts.ps1 kokoro-v1 -Voice af_bella   # kokoro with a named voice
+.\infra\set_tts.ps1 <model>                     # any TTS model that loads on your box
 ```
 
 Restart `cli.py` after swapping; the first `/speak` loads the new voice model. To do it by
