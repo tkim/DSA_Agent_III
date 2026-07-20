@@ -20,7 +20,7 @@ _PLAN_PROMPT = (
     "Given the user's request, write a concise numbered plan (max 4 steps) of how "
     "to answer it — which tools to call and in what order, or that it is a "
     "conceptual question to answer directly. Output only the plan.\n\n"
-    "Request: {query}\nPlan:"
+    "Request: {query}\nPlan: /no_think"  # disable Qwen3 thinking (see router.py)
 )
 
 # Module-level client so the planner reuses one connection.

@@ -37,17 +37,24 @@ def _home() -> Path:
     return Path(os.environ.get("USERPROFILE") or os.path.expanduser("~"))
 
 
+def _resolve(override: str) -> Path:
+    # Expand %USERPROFILE% / $VAR (expandvars) and a leading ~ (expanduser) so an
+    # override like "%USERPROFILE%\.dsa_agent_iii\history.db" from .env does not
+    # become a literal folder named "%USERPROFILE%".
+    return Path(os.path.expanduser(os.path.expandvars(override)))
+
+
 def default_db_path() -> Path:
     override = os.environ.get("DSA_HISTORY_DB")
     if override:
-        return Path(override)
+        return _resolve(override)
     return _home() / ".dsa_agent" / "history.db"
 
 
 def default_md_dir() -> Path:
     override = os.environ.get("DSA_HISTORY_MD_DIR")
     if override:
-        return Path(override)
+        return _resolve(override)
     return _home() / "Downloads" / "dsa-history"
 
 

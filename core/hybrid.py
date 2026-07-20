@@ -71,38 +71,45 @@ class HybridManager:
 
     def status(self) -> list[dict]:
         """
-        Return [{name, role, loaded}] for the /models CLI line. Tries Lemonade's
-        Ollama-compatible /api/ps for the live loaded set; falls back to the
-        configured model list marked as unknown-loaded.
+        Return [{name, role, loaded, device}] for the /models CLI line. Uses
+        Lemonade's /api/v1/health, which authoritatively reports each loaded
+        model's device ("gpu"/"npu") and pinned state; degrades to the configured
+        list with unknown-loaded if the endpoint is unavailable.
         """
+        # Planner first so that when one model serves both roles (ROUTER_MODEL ==
+        # PLANNER_MODEL, the common case), the active "NPU router" label wins.
         roles = {
             config.AGENT_MODEL: "iGPU coder",
-            config.ROUTER_MODEL: "NPU router",
             config.PLANNER_MODEL: "NPU planner",
+            config.ROUTER_MODEL: "NPU router",
         }
-        loaded_names = self._loaded_names()
+        live = self._loaded_info()  # {name: device} or None
         out: list[dict] = []
         for name in self._models_to_warm():
             out.append({
                 "name": name,
                 "role": roles.get(name, "model"),
-                "loaded": (name in loaded_names) if loaded_names is not None else None,
+                "loaded": (name in live) if live is not None else None,
+                "device": live.get(name) if live else None,
             })
         return out
 
-    def _loaded_names(self) -> set[str] | None:
-        """Best-effort query of currently-loaded models; None if unavailable."""
-        url = f"{config.native_base_url()}/api/ps"
+    def _loaded_info(self) -> dict[str, str] | None:
+        """
+        {model_name: device} for currently-loaded models via /api/v1/health;
+        None if the endpoint is unavailable. `device` is Lemonade's own label
+        ("gpu" for the iGPU llama.cpp model, "npu" for a RyzenAI hybrid model).
+        """
+        url = f"{config.native_base_url()}/api/v1/health"
         try:
-            with urllib.request.urlopen(url, timeout=2.0) as resp:
+            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {config.LEMONADE_API_KEY}"})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
                 import json
                 data = json.loads(resp.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError):
             return None
-        models = data.get("models") or data.get("data") or []
-        names: set[str] = set()
-        for m in models:
-            n = m.get("name") or m.get("model") or m.get("id")
-            if n:
-                names.add(n)
-        return names
+        info: dict[str, str] = {}
+        for m in data.get("all_models_loaded") or []:
+            if isinstance(m, dict) and m.get("loaded") and m.get("model_name"):
+                info[m["model_name"]] = m.get("device") or "?"
+        return info

@@ -39,9 +39,13 @@ AGENT_MODEL = os.getenv("AGENT_MODEL", "Qwen3-Coder-30B-A3B-Instruct-GGUF")
 ROUTER_MODEL = os.getenv("ROUTER_MODEL", AGENT_MODEL)
 PLANNER_MODEL = os.getenv("PLANNER_MODEL", ROUTER_MODEL)
 
-# llama.cpp backend for the iGPU model. ROCm is the stable choice on gfx1151
-# (Strix Halo); Vulkan is faster but leaks shared memory on this silicon.
-LLAMACPP_BACKEND = os.getenv("LLAMACPP_BACKEND", "rocm")
+# llama.cpp backend for the iGPU model, informational only: the server actually
+# selects the backend via `lemonade config set llamacpp.backend=<...>`.
+# EMPIRICAL (this Lemonade 11.0 build on gfx1151 / Strix Halo): forcing `rocm`
+# makes the 30B load fail with HTTP 500, while `auto` loads and runs fine at
+# ~36 tok/s. So `auto` is the working default here; revisit if a newer build
+# fixes the ROCm path. (Vulkan is faster but leaks shared memory on this chip.)
+LLAMACPP_BACKEND = os.getenv("LLAMACPP_BACKEND", "auto")
 
 # ---------------------------------------------------------------------------
 # Generation defaults

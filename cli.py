@@ -171,11 +171,12 @@ def _print_models(hybrid):
     t = Table(show_header=True, header_style="bold cyan", expand=False)
     t.add_column("model")
     t.add_column("role", style="cyan")
+    t.add_column("device", style="magenta")
     t.add_column("loaded", style="dim")
     for m in hybrid.status():
         loaded = m["loaded"]
         mark = "?" if loaded is None else ("yes" if loaded else "no")
-        t.add_row(m["name"], m["role"], mark)
+        t.add_row(m["name"], m["role"], m.get("device") or "-", mark)
     console.print(t)
 
 
