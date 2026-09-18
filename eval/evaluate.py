@@ -26,7 +26,7 @@ from rich.table import Table
 from agents.router import Router
 from orchestrator.pipeline import AgentPipeline
 
-PLATFORMS = ("databricks", "snowflake", "aws")
+PLATFORMS = ("databricks", "snowflake", "aws", "datahub")
 
 
 def _load(platform: str) -> list[dict]:

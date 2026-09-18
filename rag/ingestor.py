@@ -18,8 +18,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PLATFORMS = ("databricks", "snowflake", "aws")
-DOC_EXTS = (".md", ".mdx", ".txt", ".rst", ".html")
+PLATFORMS = ("databricks", "snowflake", "aws", "datahub")
+# .graphql: DataHub's GMS GraphQL schema files are ingested as-is — the SDL
+# (types plus their """docstrings""") is the authoritative API reference.
+DOC_EXTS = (".md", ".mdx", ".txt", ".rst", ".html", ".graphql")
 
 
 class _HTMLStripper(HTMLParser):
