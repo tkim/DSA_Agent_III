@@ -1,6 +1,6 @@
 """
 Router: keyword classifier with LLM fallback.
-Returns one of: 'databricks', 'snowflake', 'aws', or 'ambiguous'.
+Returns one of: 'databricks', 'snowflake', 'aws', 'datahub', or 'ambiguous'.
 
 The keyword layer is backend-free. The rare LLM fallback runs on the small
 ROUTER_MODEL (ideally the NPU RyzenAI hybrid model) via the OpenAI-compatible
@@ -27,6 +27,12 @@ KEYWORDS = {
         "iam", "cloudformation", "cdk", "sagemaker", "athena", "redshift",
         "step functions", "sns", "sqs", "kinesis", "lakeformation", "boto3",
     },
+    "datahub": {
+        "datahub", "data hub", "acryl", "urn:li:", "gms", "business glossary",
+        "glossary term", "lineage", "metadata ingestion", "ingestion recipe",
+        "ingestion source", "data contract", "assertion", "data product",
+        "metadata graph",
+    },
 }
 
 # Strong identifiers score 2x — resolves ties where a generic term
@@ -41,6 +47,10 @@ STRONG_KEYWORDS = {
         "aws", "amazon", "bedrock", "boto3", "cloudformation",
         "sagemaker", "athena", "redshift", "lakeformation",
     },
+    "datahub": {
+        "datahub", "data hub", "acryl", "urn:li:", "glossary term",
+        "ingestion recipe",
+    },
 }
 
 # NOTE: the trailing "/no_think" disables Qwen3 "thinking" mode. Without it, a
@@ -50,7 +60,7 @@ STRONG_KEYWORDS = {
 # family, which recognizes this directive; it is harmless text otherwise.
 LLM_PROMPT = (
     "Classify this cloud infrastructure query into exactly one of: "
-    "databricks, snowflake, aws.\n"
+    "databricks, snowflake, aws, datahub.\n"
     "Reply with ONLY the category name, lowercase, nothing else.\n\n"
     "Query: {query}\nCategory: /no_think"
 )
@@ -62,7 +72,7 @@ class Router:
         self.client = LLMClient()
 
     def route(self, query: str) -> str:
-        """Returns 'databricks' | 'snowflake' | 'aws' | 'ambiguous'"""
+        """Returns 'databricks' | 'snowflake' | 'aws' | 'datahub' | 'ambiguous'"""
         q = query.lower()
         scores = {
             p: sum(1 for kw in kws if kw in q)

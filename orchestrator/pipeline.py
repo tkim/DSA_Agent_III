@@ -1,12 +1,13 @@
 from agents.aws_agent import AWSAgent
 from agents.databricks_agent import DatabricksAgent
+from agents.datahub_agent import DataHubAgent
 from agents.router import Router
 from agents.snowflake_agent import SnowflakeAgent
 from core.config import AGENT_MODEL
 from orchestrator.session import Session
 
 _AMBIGUOUS = (
-    "I wasn't sure whether this relates to Databricks, Snowflake, or AWS. "
+    "I wasn't sure whether this relates to Databricks, Snowflake, AWS, or DataHub. "
     "Could you mention the platform, or use the dropdown selector in the UI?"
 )
 
@@ -20,6 +21,7 @@ class AgentPipeline:
             "databricks": DatabricksAgent(model=AGENT_MODEL),
             "snowflake":  SnowflakeAgent(model=AGENT_MODEL),
             "aws":        AWSAgent(model=AGENT_MODEL),
+            "datahub":    DataHubAgent(model=AGENT_MODEL),
         }
         self.session = Session()
 

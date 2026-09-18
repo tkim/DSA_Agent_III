@@ -13,12 +13,16 @@ for v in (
     "DATABRICKS_HOST", "DATABRICKS_TOKEN",
     "SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD",
     "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+    "DATAHUB_GMS_URL", "DATAHUB_GMS_TOKEN",
 ):
     os.environ.pop(v, None)
 
 from tools.aws_tools import TOOL_EXECUTORS as AWS_TOOLS
 from tools.databricks_tools import TOOL_EXECUTORS as DB_TOOLS
+from tools.datahub_tools import TOOL_EXECUTORS as DH_TOOLS
 from tools.snowflake_tools import TOOL_EXECUTORS as SF_TOOLS
+
+_DH_URN = "urn:li:dataset:(urn:li:dataPlatform:snowflake,analytics.public.orders,PROD)"
 
 
 DB_CASES = [
@@ -56,6 +60,18 @@ AWS_CASES = [
     ("describe_ec2_instances", {}),
 ]
 
+DH_CASES = [
+    ("search_entities", {"query": "orders"}),
+    ("get_dataset", {"urn": _DH_URN}),
+    ("get_lineage", {"urn": _DH_URN, "direction": "DOWNSTREAM"}),
+    ("list_platforms", {}),
+    ("list_domains", {}),
+    ("list_glossary_terms", {}),
+    ("get_dataset_assertions", {"urn": _DH_URN}),
+    ("list_ingestion_sources", {}),
+    ("add_tag", {"resource_urn": _DH_URN, "tag_urn": "PII"}),
+]
+
 
 @pytest.mark.parametrize("tool,args", DB_CASES)
 def test_databricks_mock(tool, args):
@@ -76,3 +92,37 @@ def test_aws_mock(tool, args):
     result = AWS_TOOLS[tool](**args)
     assert isinstance(result, dict)
     assert result.get("_mock") is True or "error" not in result
+
+
+@pytest.mark.parametrize("tool,args", DH_CASES)
+def test_datahub_mock(tool, args):
+    result = DH_TOOLS[tool](**args)
+    assert isinstance(result, dict)
+    assert result.get("_mock") is True or "error" not in result
+
+
+def test_datahub_add_tag_normalizes_bare_name():
+    result = DH_TOOLS["add_tag"](resource_urn=_DH_URN, tag_urn="PII")
+    assert result["tag_urn"] == "urn:li:tag:PII"
+
+
+def test_datahub_graphql_errors_surface_as_tool_error(monkeypatch):
+    # Live path: a GraphQL `errors` payload must come back as the standard
+    # {"error": ..., "tool": ...} shape, not raise or look like an empty result.
+    import io
+    import json
+
+    import tools.datahub_tools as dh
+
+    monkeypatch.setenv("DATAHUB_GMS_URL", "http://gms.invalid:8080")
+    seen = {}
+
+    def _fake_urlopen(req, timeout=None):
+        seen["url"] = req.full_url
+        return io.BytesIO(json.dumps({"errors": [{"message": "Unauthorized"}]}).encode())
+
+    monkeypatch.setattr(dh.urllib.request, "urlopen", _fake_urlopen)
+    result = dh.list_domains()
+    assert seen["url"] == "http://gms.invalid:8080/api/graphql"
+    assert result["tool"] == "list_domains"
+    assert "Unauthorized" in result["error"]

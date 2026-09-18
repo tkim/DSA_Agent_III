@@ -13,11 +13,13 @@ for v in (
     "DATABRICKS_HOST", "DATABRICKS_TOKEN",
     "SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD",
     "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+    "DATAHUB_GMS_URL", "DATAHUB_GMS_TOKEN",
 ):
     os.environ.pop(v, None)
 
 from agents.aws_agent import AWSAgent
 from agents.databricks_agent import DatabricksAgent
+from agents.datahub_agent import DataHubAgent
 from agents.snowflake_agent import SnowflakeAgent
 from core.llm_client import LLMResponse, ToolCall
 
@@ -66,4 +68,13 @@ def test_aws_agent_runs_tool():
     agent.client = _make_fake_client("list_s3_buckets", {})
     out = agent.run("list s3")
     assert out["tool_calls_made"][0]["name"] == "list_s3_buckets"
+    assert out["response"] == "Done."
+
+
+def test_datahub_agent_runs_tool():
+    agent = DataHubAgent(model="test")
+    agent.client = _make_fake_client("search_entities", {"query": "orders"})
+    out = agent.run("find orders in datahub")
+    assert out["tool_calls_made"][0]["name"] == "search_entities"
+    assert out["tool_calls_made"][0]["result"]["_mock"] is True
     assert out["response"] == "Done."

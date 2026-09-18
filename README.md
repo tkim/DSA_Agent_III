@@ -1,9 +1,9 @@
 # DSA Agent III
 
-An AMD-native, fully-local infrastructure agent for **Databricks**, **Snowflake**, and
-**AWS** — built on **AMD Lemonade Server 11.0**, running the 30B coder on the **iGPU** with
-a small **NPU** hybrid model for routing, plus **spoken answers** via local TTS. Tuned for
-the Asus Z13 (Ryzen AI Max+ 395 / Strix Halo, 128 GB unified, 96 GB VGM).
+An AMD-native, fully-local infrastructure agent for **Databricks**, **Snowflake**,
+**AWS**, and **DataHub** — built on **AMD Lemonade Server 11.0**, running the 30B coder
+on the **iGPU** with a small **NPU** hybrid model for routing, plus **spoken answers** via
+local TTS. Tuned for the Asus Z13 (Ryzen AI Max+ 395 / Strix Halo, 128 GB unified, 96 GB VGM).
 
 Successor to [DSA_Agent_II](../DSA_Agent_II). **No Ollama** — Lemonade is the only runtime.
 III shares nothing with II except the GPU, so the two run side by side.
@@ -37,7 +37,7 @@ Launch:
 
 At startup it warms the iGPU coder + NPU router, connects the RAG store and history, and
 shows a `you>` prompt. Just type a question in plain English — it auto-routes to Databricks,
-Snowflake, or AWS, retrieves relevant docs, calls tools as needed, and answers.
+Snowflake, AWS, or DataHub, retrieves relevant docs, calls tools as needed, and answers.
 
 ### Example session
 
@@ -50,6 +50,10 @@ you> list my S3 buckets and their object counts
   ...calls list_s3_buckets + get_s3_object_count...
   platform=aws  2100ms  tools=[list_s3_buckets, get_s3_object_count]
 
+you> what feeds the orders table? check lineage in DataHub
+  ...calls search_entities + get_lineage...
+  platform=datahub  2600ms  tools=[search_entities, get_lineage]
+
 you> /speak            # hear that last answer read aloud
 you> /save aws-buckets # write the answer to ~/Downloads as markdown
 you> /quit
@@ -59,8 +63,8 @@ you> /quit
 
 | Command | What it does |
 |---|---|
-| *(any question)* | Auto-routed to Databricks / Snowflake / AWS, answered with tools + RAG |
-| `/platform <name>` | Lock to `databricks` / `snowflake` / `aws` (or `auto` to unlock) |
+| *(any question)* | Auto-routed to Databricks / Snowflake / AWS / DataHub, answered with tools + RAG |
+| `/platform <name>` | Lock to `databricks` / `snowflake` / `aws` / `datahub` (or `auto` to unlock) |
 | **`/speak`** | Read the last answer aloud via local TTS (see [Voice](#voice--tts)) |
 | `/models` | Show loaded models and their **device** (iGPU coder / NPU router) |
 | `/save [name]` | Export the last answer to `~/Downloads` as markdown |
@@ -75,8 +79,22 @@ you> /quit
 
 Cloud credentials are **blank in `.env` by default**, so every tool returns realistic
 **mock data** — the agent is fully usable offline with no accounts. To hit live
-infrastructure, fill in the `DATABRICKS_* / SNOWFLAKE_* / AWS_*` values in `.env`; each tool
-switches to live automatically once its credentials are present.
+infrastructure, fill in the `DATABRICKS_* / SNOWFLAKE_* / AWS_* / DATAHUB_*` values in `.env`; each
+tool switches to live automatically once its credentials are present.
+
+### Platform tools
+
+| Platform | Tools |
+|---|---|
+| Databricks | clusters, SQL statements, Unity Catalog tables, MLflow experiments/runs, jobs |
+| Snowflake | SQL, databases/schemas/tables, warehouses, query history, Cortex COMPLETE |
+| AWS | S3, Glue Data Catalog, Bedrock, IAM policies, Lambda, EC2 |
+| DataHub | catalog search, dataset schema/owners/tags/terms/domain, upstream/downstream lineage, platforms, domains, glossary terms, assertions, ingestion sources, add tag |
+
+DataHub tools call GMS GraphQL (`$DATAHUB_GMS_URL/api/graphql`) directly, with no SDK.
+They work the same against a local quickstart (`http://localhost:8080`) and DataHub Cloud
+(`https://<tenant>.acryl.io/gms`). Set `DATAHUB_GMS_TOKEN` to a personal access token
+whenever metadata-service auth is enabled. `add_tag` is the only tool that writes metadata.
 
 ---
 
@@ -146,7 +164,7 @@ Note the hybrid model name it prints.
 py -3.11 -m venv .venv
 .\.venv\Scripts\pip install -e .
 copy .env.example .env
-.\.venv\Scripts\python.exe -m pytest tests\ -q        # offline mock suite (expect 44 passed)
+.\.venv\Scripts\python.exe -m pytest tests\ -q        # offline mock suite (expect 59 passed)
 ```
 
 Then edit `.env`: set `ROUTER_MODEL` / `PLANNER_MODEL` to the hybrid model from step 2
@@ -165,9 +183,9 @@ Then edit `.env`: set `ROUTER_MODEL` / `PLANNER_MODEL` to the hybrid model from 
 .\rag\fetch_docs.ps1
 ```
 
-Scrapes official platform docs (docs.databricks.com + docs.snowflake.com via sitemap) and
-AWS SDK references, then embeds them into a local ChromaDB. Takes a while (tens of thousands
-of pages); it stages writes and swaps atomically, so it's safe to interrupt.
+Scrapes official platform docs (docs.databricks.com, docs.snowflake.com and docs.datahub.com
+via sitemap), the DataHub GMS GraphQL schema, and AWS SDK references, then embeds them into
+a local ChromaDB. Takes a while (tens of thousands of pages); it stages writes and swaps atomically, so it's safe to interrupt.
 
 You're done — launch with [Quick start](#quick-start-already-set-up).
 
@@ -208,7 +226,7 @@ Because III uses no Ollama, the only shared resource is the iGPU/VRAM.
 ```
 cli.py
   └─ orchestrator/pipeline.py ── router (NPU) ─┐
-                                               ├─ agents/{databricks,snowflake,aws}_agent.py
+                                               ├─ agents/{databricks,snowflake,aws,datahub}_agent.py
                                                │     └─ core/llm_client.py ── Lemonade /v1 (iGPU coder)
                                                │     └─ tools/*  (mock-safe, OpenAI tool schemas)
                                                │     └─ rag/retriever.py (CPU embeddings + ChromaDB)
@@ -236,7 +254,7 @@ model — no extra setup in III.
 ```
 
 Tools are mock-safe (missing credentials → realistic mock data) and the agent loop is tested
-against a fake `LLMClient`, so the suite (44 tests) needs neither the server nor cloud creds.
+against a fake `LLMClient`, so the suite (59 tests) needs neither the server nor cloud creds.
 
 ## Troubleshooting
 

@@ -6,7 +6,7 @@ Usage:
     python cli.py --platform aws   # lock to one platform
 
 Commands (type during chat):
-    /platform auto|databricks|snowflake|aws   switch platform
+    /platform auto|databricks|snowflake|aws|datahub   switch platform
     /speak                                    speak the last response (Lemonade TTS)
     /models                                   show NPU + iGPU model status
     /save [filename]                          save last response to Downloads as .md
@@ -210,7 +210,7 @@ def main():
     parser = argparse.ArgumentParser(description="DSA Agent III CLI")
     parser.add_argument(
         "--platform",
-        choices=["auto", "databricks", "snowflake", "aws"],
+        choices=["auto", "databricks", "snowflake", "aws", "datahub"],
         default="auto",
         help="Lock to a platform or let the router decide (default: auto)",
     )
@@ -357,11 +357,11 @@ def main():
 
         if user_input.lower().startswith("/platform "):
             chosen = user_input.split(maxsplit=1)[1].strip().lower()
-            if chosen in ("auto", "databricks", "snowflake", "aws"):
+            if chosen in ("auto", "databricks", "snowflake", "aws", "datahub"):
                 current_platform = chosen
                 console.print(f"[dim]Platform set to [bold]{current_platform}[/bold][/dim]")
             else:
-                console.print("[red]Unknown platform. Choose: auto databricks snowflake aws[/red]")
+                console.print("[red]Unknown platform. Choose: auto databricks snowflake aws datahub[/red]")
             continue
 
         # --- agent query ---
