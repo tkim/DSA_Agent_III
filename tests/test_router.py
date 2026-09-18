@@ -35,3 +35,20 @@ def test_cortex_routes_to_snowflake():
 def test_bedrock_routes_to_aws():
     r = Router()
     assert r.route("What Bedrock models are available?") == "aws"
+
+
+def test_datahub_keyword():
+    r = Router()
+    assert r.route("Search DataHub for the orders dataset") == "datahub"
+
+
+def test_glossary_term_routes_to_datahub():
+    r = Router()
+    assert r.route("List every glossary term in our business glossary") == "datahub"
+
+
+def test_snowflake_urn_lineage_routes_to_datahub():
+    # A Snowflake dataset referenced by DataHub URN is a catalog question.
+    r = Router()
+    q = "Show lineage for urn:li:dataset:(urn:li:dataPlatform:snowflake,db.public.orders,PROD)"
+    assert r.route(q) == "datahub"

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dsa-agent-iii"
 version = "0.1.0"
-description = "AMD-native local infra agent (Databricks/Snowflake/AWS) on Lemonade 11.0 — iGPU+NPU hybrid, omni-modal"
+description = "AMD-native local infra agent (Databricks/Snowflake/AWS/DataHub) on Lemonade 11.0 — iGPU+NPU hybrid, omni-modal"
 requires-python = ">=3.11"
 dependencies = [
     # Inference — Lemonade OpenAI-compatible /v1 (NO ollama; Lemonade is the runtime)
@@ -18,6 +18,7 @@ dependencies = [
     "databricks-sdk>=0.25.0",
     "snowflake-connector-python>=3.8.0",
     "boto3>=1.35.0",
+    # DataHub: no SDK — tools/datahub_tools.py speaks GMS GraphQL over stdlib urllib
     # Utilities
     "pydantic>=2.7.0",
     "python-dotenv>=1.0.0",

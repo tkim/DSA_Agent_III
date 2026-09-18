@@ -1,4 +1,4 @@
-# fetch_docs.ps1 — one-shot bootstrap of the full RAG corpus for all three
+# fetch_docs.ps1 — one-shot bootstrap of the full RAG corpus for all four
 # platforms, then build the ChromaDB collections.
 #
 # This is a thin front-end over rag/refresher.py, which is the single source of
@@ -9,9 +9,12 @@
 #
 #   Databricks : official platform docs from docs.databricks.com (~4,360 pages,
 #                enumerated from sitemap.xml) + delta-io/delta OSS docs
-#   Snowflake  : connector/snowpark READMEs + sfquickstarts guides
+#   Snowflake  : official platform docs from docs.snowflake.com (sitemap)
+#                + connector/snowpark READMEs + sfquickstarts guides
 #   AWS        : botocore service definitions,
 #                PLUS boto3 SDK client references (generated below)
+#   DataHub    : official docs from docs.datahub.com (~700 pages, sitemap)
+#                + GMS GraphQL schema + metadata-ingestion READMEs
 #
 # NOTE: the Databricks platform scrape fetches thousands of pages and takes
 # ~10 minutes on a first run. Tune with RAG_WEB_WORKERS / RAG_WEB_DELAY_S.
@@ -20,7 +23,7 @@ $ErrorActionPreference = "Stop"
 
 $py = if (Test-Path ".\.venv\Scripts\python.exe") { ".\.venv\Scripts\python.exe" } else { "python" }
 
-New-Item -ItemType Directory -Force -Path "rag\docs\databricks","rag\docs\snowflake","rag\docs\aws" | Out-Null
+New-Item -ItemType Directory -Force -Path "rag\docs\databricks","rag\docs\snowflake","rag\docs\aws","rag\docs\datahub" | Out-Null
 
 # --- AWS: boto3 SDK client references (pydoc) -------------------------------
 # Generated locally from the installed boto3; the refresher below adds the
@@ -43,8 +46,8 @@ for svc in ['s3','glue','bedrock-runtime','iam','lambda','ec2']:
 
 # --- All tracked sources + build the store ---------------------------------
 # --force re-fetches every source regardless of stored SHA and re-ingests all
-# three collections (the aws pass picks up the boto3 files generated above).
+# four collections (the aws pass picks up the boto3 files generated above).
 Write-Host "`nFetching tracked docs and rebuilding ChromaDB (this can take a few minutes)..." -ForegroundColor Cyan
 & $py -m rag.refresher --force
 
-Write-Host "`nDone. All three collections are current. Launch with: $py cli.py" -ForegroundColor Green
+Write-Host "`nDone. All four collections are current. Launch with: $py cli.py" -ForegroundColor Green
