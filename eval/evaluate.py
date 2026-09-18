@@ -2,7 +2,8 @@
 Evaluation harness.
 
 Runs all queries in eval/queries/*.json through AgentPipeline and scores:
-- tool selection accuracy (expected_tool matches first tool called)
+- tool selection accuracy (expected_tool matches first tool called; for
+  multi_tool, >= min_tool_calls and expected_tools_sequence called in order)
 - required-arg hit rate
 - routing accuracy
 - p50 / p95 latency
@@ -39,8 +40,18 @@ def _score_query(expected: dict, result: dict, router_platform: str) -> dict:
     first_tool = tool_calls[0]["name"] if tool_calls else None
     first_args = tool_calls[0]["args"] if tool_calls else {}
 
-    et = expected.get("expected_tool")
-    tool_ok = (et is None and not tool_calls) or (et is not None and first_tool == et)
+    if expected.get("type") == "multi_tool":
+        # Multi-tool queries carry no expected_tool; pass when enough calls were
+        # made and expected_tools_sequence appears in order (gaps allowed).
+        names = iter(tc["name"] for tc in tool_calls)
+        seq = expected.get("expected_tools_sequence", []) or []
+        tool_ok = (
+            len(tool_calls) >= expected.get("min_tool_calls", 1)
+            and all(t in names for t in seq)
+        )
+    else:
+        et = expected.get("expected_tool")
+        tool_ok = (et is None and not tool_calls) or (et is not None and first_tool == et)
 
     req = expected.get("required_args", []) or []
     req_ok = all(k in first_args for k in req) if req else True
